@@ -7,16 +7,15 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from app.db.vector_store import get_pattern_summary
 from app.db.timeline import get_timeline, get_multi_service_timeline
+
 load_dotenv()
 
-client = OpenAI(
-    base_url=os.getenv("OLLAMA_BASE_URL"),
-    api_key="ollama"
-)
+client = OpenAI(base_url=os.getenv("OLLAMA_BASE_URL"), api_key="ollama")
 MODEL = os.getenv("OLLAMA_MODEL")
 SERVER_SCRIPT = os.path.join(os.path.dirname(__file__), "..", "tools", "mcp_server.py")
 
@@ -44,14 +43,15 @@ Always include:
 - Confidence level (low/medium/high)
 If evidence is missing or unclear, say so."""
 
+
 async def plan(query: str) -> dict:
     response = client.chat.completions.create(
         model=MODEL,
         messages=[
             {"role": "system", "content": PLANNER_PROMPT},
-            {"role": "user", "content": query}
+            {"role": "user", "content": query},
         ],
-        temperature=0.1
+        temperature=0.1,
     )
     raw = response.choices[0].message.content.strip()
     try:
@@ -64,8 +64,9 @@ async def plan(query: str) -> dict:
         return {
             "intent": "incident_investigation",
             "service": "auth-service",
-            "tools": ["search_logs", "search_incidents", "get_recent_deployments"]
+            "tools": ["search_logs", "search_incidents", "get_recent_deployments"],
         }
+
 
 async def run_investigation(query: str, status_callback=None) -> dict:
     def log(msg):
@@ -80,10 +81,7 @@ async def run_investigation(query: str, status_callback=None) -> dict:
     tools_to_run = plan_result.get("tools", ["search_logs", "search_incidents"])
     log(f"Service: {service} | Tools: {', '.join(tools_to_run)}")
 
-    server_params = StdioServerParameters(
-        command="python",
-        args=[SERVER_SCRIPT]
-    )
+    server_params = StdioServerParameters(command="python", args=[SERVER_SCRIPT])
 
     evidence_parts = []
 
@@ -118,36 +116,35 @@ async def run_investigation(query: str, status_callback=None) -> dict:
         model=MODEL,
         messages=[
             {"role": "system", "content": ANSWERER_PROMPT},
-            {"role": "user", "content": f"Query: {query}\n\nEvidence:\n{evidence}"}
+            {"role": "user", "content": f"Query: {query}\n\nEvidence:\n{evidence}"},
         ],
-        temperature=0.2
+        temperature=0.2,
     )
 
     answer = response.choices[0].message.content.strip()
-    return {
-        "service": service,
-        "tools_used": tools_to_run,
-        "evidence": evidence,
-        "answer": answer
-    }
+    return {"service": service, "tools_used": tools_to_run, "evidence": evidence, "answer": answer}
 
-async def save_resolution(service: str, title: str, symptoms: str, root_cause: str, resolution: str, tags: list) -> str:
-    server_params = StdioServerParameters(
-        command="python",
-        args=[SERVER_SCRIPT]
-    )
+
+async def save_resolution(
+    service: str, title: str, symptoms: str, root_cause: str, resolution: str, tags: list
+) -> str:
+    server_params = StdioServerParameters(command="python", args=[SERVER_SCRIPT])
     async with stdio_client(server_params) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
-            result = await session.call_tool("save_resolution", {
-                "service": service,
-                "title": title,
-                "symptoms": symptoms,
-                "root_cause": root_cause,
-                "resolution": resolution,
-                "tags": tags
-            })
+            result = await session.call_tool(
+                "save_resolution",
+                {
+                    "service": service,
+                    "title": title,
+                    "symptoms": symptoms,
+                    "root_cause": root_cause,
+                    "resolution": resolution,
+                    "tags": tags,
+                },
+            )
             return result.content[0].text
+
 
 def draft_status_update(query: str, answer: str, service: str, channel: str = "slack") -> str:
     if channel == "slack":
@@ -179,11 +176,12 @@ Keep it professional and under 200 words."""
         model=MODEL,
         messages=[
             {"role": "system", "content": prompt},
-            {"role": "user", "content": f"Investigation query: {query}\n\nFindings:\n{answer}"}
+            {"role": "user", "content": f"Investigation query: {query}\n\nFindings:\n{answer}"},
         ],
-        temperature=0.3
+        temperature=0.3,
     )
     return response.choices[0].message.content.strip()
+
 
 async def run_multi_service_investigation(query: str, status_callback=None) -> dict:
     def log(msg):
@@ -196,12 +194,15 @@ async def run_multi_service_investigation(query: str, status_callback=None) -> d
     response = client.chat.completions.create(
         model=MODEL,
         messages=[
-            {"role": "system", "content": """You are an ops planner. Return ONLY valid JSON like:
+            {
+                "role": "system",
+                "content": """You are an ops planner. Return ONLY valid JSON like:
 {"services": ["auth-service", "payment-service"]}
-Pick 1-3 from: auth-service, payment-service, notification-service"""},
-            {"role": "user", "content": query}
+Pick 1-3 from: auth-service, payment-service, notification-service""",
+            },
+            {"role": "user", "content": query},
         ],
-        temperature=0.1
+        temperature=0.1,
     )
     raw = response.choices[0].message.content.strip()
     try:
@@ -229,7 +230,9 @@ Pick 1-3 from: auth-service, payment-service, notification-service"""},
                         if tool_name == "search_incidents":
                             args["query"] = query
                         result = await session.call_tool(tool_name, args)
-                        all_evidence.append(f"=== {tool_name} ({svc}) ===\n{result.content[0].text}")
+                        all_evidence.append(
+                            f"=== {tool_name} ({svc}) ===\n{result.content[0].text}"
+                        )
                     except Exception as e:
                         all_evidence.append(f"=== {tool_name} ({svc}) ===\nError: {e}")
 
@@ -243,24 +246,33 @@ Pick 1-3 from: auth-service, payment-service, notification-service"""},
     response = client.chat.completions.create(
         model=MODEL,
         messages=[
-            {"role": "system", "content": ANSWERER_PROMPT + "\nAlso identify if multiple services are related to the same root cause."},
-            {"role": "user", "content": f"Query: {query}\n\nEvidence:\n{evidence}"}
+            {
+                "role": "system",
+                "content": ANSWERER_PROMPT
+                + "\nAlso identify if multiple services are related to the same root cause.",
+            },
+            {"role": "user", "content": f"Query: {query}\n\nEvidence:\n{evidence}"},
         ],
-        temperature=0.2
+        temperature=0.2,
     )
 
     return {
         "services": services,
-        "tools_used": ["search_logs", "search_incidents", "get_recent_deployments", "pattern_matching"],
+        "tools_used": [
+            "search_logs",
+            "search_incidents",
+            "get_recent_deployments",
+            "pattern_matching",
+        ],
         "evidence": evidence,
-        "answer": response.choices[0].message.content.strip()
+        "answer": response.choices[0].message.content.strip(),
     }
 
-    
+
 if __name__ == "__main__":
     query = "Why is auth-service failing after the last deployment?"
     result = asyncio.run(run_investigation(query))
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("ANSWER:")
-    print("="*60)
+    print("=" * 60)
     print(result["answer"])

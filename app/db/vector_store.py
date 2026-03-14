@@ -7,19 +7,23 @@ load_dotenv()
 
 try:
     from sentence_transformers import SentenceTransformer
+
     model = SentenceTransformer("all-MiniLM-L6-v2")
     EMBEDDINGS_AVAILABLE = True
 except Exception:
     EMBEDDINGS_AVAILABLE = False
+
 
 def embed(text: str) -> list:
     if not EMBEDDINGS_AVAILABLE:
         return []
     return model.encode(text).tolist()
 
+
 def cosine_similarity(a, b):
     a, b = np.array(a), np.array(b)
     return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+
 
 def find_similar_incidents(query: str, top_k: int = 3) -> list:
     if not EMBEDDINGS_AVAILABLE:
@@ -47,6 +51,7 @@ def find_similar_incidents(query: str, top_k: int = 3) -> list:
         if len(deduped) >= top_k:
             break
     return deduped
+
 
 def get_pattern_summary(query: str) -> str:
     matches = find_similar_incidents(query)

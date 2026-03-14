@@ -6,15 +6,18 @@ import os
 
 router = APIRouter(prefix="/query", tags=["query"])
 
+
 class QueryRequest(BaseModel):
     query: str
     mode: str = "single"
+
 
 class QueryResponse(BaseModel):
     service: str | list
     tools_used: list
     answer: str
     evidence: str
+
 
 @router.post("", response_model=QueryResponse)
 async def query(req: QueryRequest):
@@ -29,7 +32,7 @@ async def query(req: QueryRequest):
             query=req.query,
             service=result.get("service") or str(result.get("services", [])),
             tools_used=result.get("tools_used", []),
-            answer=result.get("answer", "")
+            answer=result.get("answer", ""),
         )
         return result
     except Exception as e:

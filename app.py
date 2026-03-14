@@ -4,7 +4,12 @@ import sys
 import os
 
 sys.path.append(os.path.dirname(__file__))
-from agent.agent import run_investigation, run_multi_service_investigation, save_resolution, draft_status_update
+from agent.agent import (
+    run_investigation,
+    run_multi_service_investigation,
+    save_resolution,
+    draft_status_update,
+)
 from db.timeline import get_timeline, get_multi_service_timeline
 from db.vector_store import get_pattern_summary
 
@@ -25,7 +30,7 @@ with st.sidebar:
         "Payment service is timing out, what happened?",
         "Have we seen Redis latency issues before?",
         "Why are both auth and payment services down?",
-        "What changed across all services recently?"
+        "What changed across all services recently?",
     ]
     for ex in examples:
         if st.button(ex, use_container_width=True):
@@ -75,7 +80,9 @@ with tab1:
 
             with st.spinner("Investigating..."):
                 if mode == "Multi-service":
-                    result = asyncio.run(run_multi_service_investigation(query, status_callback=update_status))
+                    result = asyncio.run(
+                        run_multi_service_investigation(query, status_callback=update_status)
+                    )
                     services_label = ", ".join(f"`{s}`" for s in result["services"])
                     st.markdown(f"**Services:** {services_label}")
                 else:
@@ -106,14 +113,16 @@ with tab1:
             if st.button("💾 Save resolution", use_container_width=True):
                 with st.spinner("Saving..."):
                     svc = result.get("service") or result.get("services", ["unknown"])[0]
-                    msg = asyncio.run(save_resolution(
-                        service=svc,
-                        title=f"Investigation: {query_saved[:60]}",
-                        symptoms=query_saved,
-                        root_cause=result["answer"][:300],
-                        resolution=result["answer"][:300],
-                        tags=[svc, "auto-saved"]
-                    ))
+                    msg = asyncio.run(
+                        save_resolution(
+                            service=svc,
+                            title=f"Investigation: {query_saved[:60]}",
+                            symptoms=query_saved,
+                            root_cause=result["answer"][:300],
+                            resolution=result["answer"][:300],
+                            tags=[svc, "auto-saved"],
+                        )
+                    )
                 st.success(f"Saved! {msg}")
                 st.session_state.saved.append(query_saved[:50])
                 st.rerun()
@@ -123,7 +132,9 @@ with tab1:
                 with st.spinner("Drafting..."):
                     svc = result.get("service") or result.get("services", ["unknown"])[0]
                     slack_msg = draft_status_update(query_saved, result["answer"], svc, "slack")
-                st.session_state.history.append({"role": "assistant", "content": f"**Slack update:**\n\n{slack_msg}"})
+                st.session_state.history.append(
+                    {"role": "assistant", "content": f"**Slack update:**\n\n{slack_msg}"}
+                )
                 st.rerun()
 
         with col3:
@@ -131,7 +142,9 @@ with tab1:
                 with st.spinner("Drafting..."):
                     svc = result.get("service") or result.get("services", ["unknown"])[0]
                     email_msg = draft_status_update(query_saved, result["answer"], svc, "email")
-                st.session_state.history.append({"role": "assistant", "content": f"**Email update:**\n\n{email_msg}"})
+                st.session_state.history.append(
+                    {"role": "assistant", "content": f"**Email update:**\n\n{email_msg}"}
+                )
                 st.rerun()
 
 with tab2:
@@ -141,7 +154,7 @@ with tab2:
         selected_services = st.multiselect(
             "Services",
             ["auth-service", "payment-service", "notification-service"],
-            default=["auth-service"]
+            default=["auth-service"],
         )
     with col2:
         hours = st.selectbox("Time window", [6, 12, 24, 48, 72], index=2)
@@ -160,7 +173,7 @@ with tab2:
                 "WARN": "🟡",
                 "INFO": "🟢",
                 "deployment": "🚀",
-                "incident": "⚠️"
+                "incident": "⚠️",
             }
             for event in reversed(events):
                 t = event["time"][:19].replace("T", " ")
@@ -185,7 +198,9 @@ with tab2:
 with tab3:
     st.subheader("Pattern matching")
     st.caption("Find similar past incidents using semantic search")
-    pattern_query = st.text_input("Describe the issue", placeholder="e.g. database connection timeout after deployment")
+    pattern_query = st.text_input(
+        "Describe the issue", placeholder="e.g. database connection timeout after deployment"
+    )
 
     if st.button("Find similar incidents", use_container_width=True):
         with st.spinner("Searching pattern history..."):
@@ -193,4 +208,6 @@ with tab3:
         st.markdown(summary)
 
     st.divider()
-    st.caption("How it works: your query is converted to a vector embedding using a local model, then compared against all saved incidents using cosine similarity. No data leaves your machine.")
+    st.caption(
+        "How it works: your query is converted to a vector embedding using a local model, then compared against all saved incidents using cosine similarity. No data leaves your machine."
+    )

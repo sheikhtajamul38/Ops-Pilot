@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 def test_health_endpoint():
     from app.main import app
+
     client = TestClient(app)
     response = client.get("/health")
     assert response.status_code == 200
@@ -13,6 +14,7 @@ def test_health_endpoint():
 
 def test_list_services():
     from app.main import app
+
     client = TestClient(app)
     response = client.get("/services")
     assert response.status_code == 200
@@ -27,7 +29,7 @@ def test_search_logs_formats_output():
             "service": "auth-service",
             "level": "ERROR",
             "message": "signing key verification failed",
-            "timestamp": "2026-03-14T10:00:00"
+            "timestamp": "2026-03-14T10:00:00",
         }
     ]
     assert mock_data[0]["level"] == "ERROR"
@@ -42,7 +44,7 @@ def test_incident_template_structure():
         "symptoms": "Users unable to login",
         "root_cause": "Expired signing key",
         "resolution": "Rotated signing key",
-        "tags": ["bad_deploy", "signing_key"]
+        "tags": ["bad_deploy", "signing_key"],
     }
     assert incident["severity"] == "high"
     assert "bad_deploy" in incident["tags"]
@@ -51,6 +53,7 @@ def test_incident_template_structure():
 def test_env_variables_present():
     import os
     from dotenv import load_dotenv
+
     load_dotenv()
     assert os.getenv("SUPABASE_URL") is not None
     assert os.getenv("SUPABASE_KEY") is not None

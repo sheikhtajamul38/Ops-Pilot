@@ -31,7 +31,7 @@ Resolution patterns:
 - Signing key: rotate key, redeploy auth-service
 - Profile timeout: check profile-service health, increase timeout config
 """,
-        "dependencies": ["redis", "profile-service", "postgres"]
+        "dependencies": ["redis", "profile-service", "postgres"],
     },
     {
         "name": "payment-service",
@@ -56,7 +56,7 @@ Resolution patterns:
 - Stripe timeout: check Stripe status page, enable retry logic
 - Kafka lag: scale consumers, check partition assignment
 """,
-        "dependencies": ["postgres", "kafka", "stripe-api", "redis"]
+        "dependencies": ["postgres", "kafka", "stripe-api", "redis"],
     },
     {
         "name": "notification-service",
@@ -80,8 +80,8 @@ Resolution patterns:
 - SMS timeout: failover to backup gateway
 - Queue backlog: scale workers, check for poison messages
 """,
-        "dependencies": ["rabbitmq", "sendgrid", "twilio", "postgres"]
-    }
+        "dependencies": ["rabbitmq", "sendgrid", "twilio", "postgres"],
+    },
 ]
 
 incident_templates = [
@@ -92,7 +92,7 @@ incident_templates = [
         "symptoms": "Users unable to login, token validation errors in logs, 401 responses spiking",
         "root_cause": "Expired signing key introduced during deployment rotation",
         "resolution": "Rotated signing key, redeployed auth-service, cleared token cache",
-        "tags": ["bad_deploy", "signing_key", "auth_failure"]
+        "tags": ["bad_deploy", "signing_key", "auth_failure"],
     },
     {
         "title": "Redis latency causing auth timeouts",
@@ -101,7 +101,7 @@ incident_templates = [
         "symptoms": "Slow login response times, Redis latency above 200ms, timeout errors",
         "root_cause": "Redis memory pressure due to missing TTL on session keys",
         "resolution": "Added TTL to session keys, flushed expired entries, restarted Redis",
-        "tags": ["redis", "latency", "memory_pressure"]
+        "tags": ["redis", "latency", "memory_pressure"],
     },
     {
         "title": "DB connection pool exhaustion",
@@ -110,7 +110,7 @@ incident_templates = [
         "symptoms": "Payment requests timing out, connection pool errors, 503 responses",
         "root_cause": "New deployment increased connection count beyond pool limit",
         "resolution": "Increased max_connections to 100, restarted workers, rolled back config",
-        "tags": ["db_timeout", "bad_deploy", "connection_pool"]
+        "tags": ["db_timeout", "bad_deploy", "connection_pool"],
     },
     {
         "title": "Kafka consumer lag spike",
@@ -119,7 +119,7 @@ incident_templates = [
         "symptoms": "Payment notifications delayed, Kafka lag above 50k messages",
         "root_cause": "Consumer group rebalance after pod restart caused processing slowdown",
         "resolution": "Scaled consumers to 6 replicas, rebalanced partitions",
-        "tags": ["kafka_lag", "consumer_group", "scaling"]
+        "tags": ["kafka_lag", "consumer_group", "scaling"],
     },
     {
         "title": "Email rate limit exceeded",
@@ -128,7 +128,7 @@ incident_templates = [
         "symptoms": "Emails queued but not sent, SendGrid 429 errors, queue depth growing",
         "root_cause": "Marketing campaign triggered 10x normal email volume without rate limiting",
         "resolution": "Throttled send rate to 100/min, switched overflow to secondary provider",
-        "tags": ["rate_limit", "email", "sendgrid"]
+        "tags": ["rate_limit", "email", "sendgrid"],
     },
     {
         "title": "Upstream profile service timeout",
@@ -137,7 +137,7 @@ incident_templates = [
         "symptoms": "Login requests failing for 30% of users, profile fetch timeout errors",
         "root_cause": "Profile service overloaded due to missing cache layer after cache flush",
         "resolution": "Re-enabled Redis cache for profile service, increased timeout to 5s",
-        "tags": ["dependency_failure", "timeout", "cache"]
+        "tags": ["dependency_failure", "timeout", "cache"],
     },
     {
         "title": "Memory spike causing OOM restarts",
@@ -146,7 +146,7 @@ incident_templates = [
         "symptoms": "Payment pods restarting, OOMKilled events, transaction failures",
         "root_cause": "Memory leak in payment reconciliation job introduced in v2.1.0",
         "resolution": "Rolled back to v2.0.9, patched reconciliation job memory handling",
-        "tags": ["memory_pressure", "oom", "bad_deploy"]
+        "tags": ["memory_pressure", "oom", "bad_deploy"],
     },
     {
         "title": "SMS gateway timeout",
@@ -155,8 +155,8 @@ incident_templates = [
         "symptoms": "SMS notifications delayed by 15 minutes, Twilio timeout errors",
         "root_cause": "Twilio regional outage affecting EU endpoints",
         "resolution": "Rerouted SMS traffic to US endpoint, delays cleared within 20 minutes",
-        "tags": ["sms", "dependency_failure", "twilio"]
-    }
+        "tags": ["sms", "dependency_failure", "twilio"],
+    },
 ]
 
 deployment_templates = [
@@ -188,12 +188,17 @@ log_templates = [
     ("notification-service", "INFO", "email sent successfully to {n} recipients"),
 ]
 
+
 def random_time(days_back=30):
-    return (datetime.utcnow() - timedelta(
-        days=random.randint(0, days_back),
-        hours=random.randint(0, 23),
-        minutes=random.randint(0, 59)
-    )).isoformat()
+    return (
+        datetime.utcnow()
+        - timedelta(
+            days=random.randint(0, days_back),
+            hours=random.randint(0, 23),
+            minutes=random.randint(0, 59),
+        )
+    ).isoformat()
+
 
 print("Seeding services...")
 sb.table("services").delete().neq("id", 0).execute()
@@ -205,12 +210,14 @@ incidents = []
 for tmpl in incident_templates:
     for _ in range(random.randint(2, 4)):
         start = datetime.utcnow() - timedelta(days=random.randint(1, 30))
-        incidents.append({
-            **tmpl,
-            "start_time": start.isoformat(),
-            "end_time": (start + timedelta(hours=random.randint(1, 6))).isoformat(),
-            "status": "resolved"
-        })
+        incidents.append(
+            {
+                **tmpl,
+                "start_time": start.isoformat(),
+                "end_time": (start + timedelta(hours=random.randint(1, 6))).isoformat(),
+                "status": "resolved",
+            }
+        )
 sb.table("incidents").insert(incidents).execute()
 
 print("Seeding deployments...")
@@ -220,14 +227,16 @@ service_names = ["auth-service", "payment-service", "notification-service"]
 engineers = ["alice", "bob", "carlos", "diana", "eve"]
 for svc in service_names:
     for tmpl in random.sample(deployment_templates, 5):
-        deployments.append({
-            "service": svc,
-            "version": tmpl["version"],
-            "deployed_at": random_time(14),
-            "commit_sha": f"{random.randint(10000,99999):x}abc{random.randint(100,999)}",
-            "changed_by": random.choice(engineers),
-            "notes": tmpl["notes"]
-        })
+        deployments.append(
+            {
+                "service": svc,
+                "version": tmpl["version"],
+                "deployed_at": random_time(14),
+                "commit_sha": f"{random.randint(10000,99999):x}abc{random.randint(100,999)}",
+                "changed_by": random.choice(engineers),
+                "notes": tmpl["notes"],
+            }
+        )
 sb.table("deployments").insert(deployments).execute()
 
 print("Seeding logs...")
@@ -240,14 +249,9 @@ for _ in range(200):
         tenant=random.choice(tenants),
         ms=random.randint(100, 5000),
         n=random.randint(10, 100000),
-        txn=f"txn_{random.randint(10000,99999)}"
+        txn=f"txn_{random.randint(10000,99999)}",
     )
-    logs.append({
-        "service": tmpl[0],
-        "level": tmpl[1],
-        "message": msg,
-        "timestamp": random_time(2)
-    })
+    logs.append({"service": tmpl[0], "level": tmpl[1], "message": msg, "timestamp": random_time(2)})
 sb.table("logs").insert(logs).execute()
 
 print("Done! All data seeded successfully.")
