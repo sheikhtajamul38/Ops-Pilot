@@ -1,0 +1,32 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Deploy to staging
+        run: |
+          echo "Deploy to staging server"
+          # ssh into server and pull new image
+          # docker pull + docker-compose up -d
+
+      - name: Run smoke tests
+        run: |
+          curl --fail https://staging.opspilot.io/health
+          curl --fail -X POST https://staging.opspilot.io/query \
+            -H "Content-Type: application/json" \
+            -d '{"query": "ping"}'
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    environment: production   # requires manual approval in GitHub
+    steps:
+      - name: Deploy to production
+        run: |
+          echo "Deploy to production"
