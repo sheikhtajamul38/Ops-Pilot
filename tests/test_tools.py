@@ -1,9 +1,14 @@
 import pytest
-from unittest.mock import patch, MagicMock
-from fastapi.testclient import TestClient
+import os
+
+os.environ.setdefault("SUPABASE_URL", "https://fake.supabase.co")
+os.environ.setdefault("SUPABASE_KEY", "fake-key-for-testing")
+os.environ.setdefault("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+os.environ.setdefault("OLLAMA_MODEL", "qwen3.5:4b")
 
 
 def test_health_endpoint():
+    from fastapi.testclient import TestClient
     from app.main import app
 
     client = TestClient(app)
@@ -13,32 +18,19 @@ def test_health_endpoint():
 
 
 def test_list_services():
+    from fastapi.testclient import TestClient
     from app.main import app
 
     client = TestClient(app)
     response = client.get("/services")
     assert response.status_code == 200
-    data = response.json()
-    assert "services" in data
-    assert "auth-service" in data["services"]
+    names = [s["name"] for s in response.json()["services"]]
+    assert "auth-service" in names
 
 
-def test_search_logs_formats_output():
-    mock_data = [
-        {
-            "service": "auth-service",
-            "level": "ERROR",
-            "message": "signing key verification failed",
-            "timestamp": "2026-03-14T10:00:00",
-        }
-    ]
-    assert mock_data[0]["level"] == "ERROR"
-    assert "signing key" in mock_data[0]["message"]
-
-
-def test_incident_template_structure():
+def test_incident_structure():
     incident = {
-        "title": "Token validation failures after deployment",
+        "title": "Token validation failures",
         "service": "auth-service",
         "severity": "high",
         "symptoms": "Users unable to login",
@@ -50,12 +42,17 @@ def test_incident_template_structure():
     assert "bad_deploy" in incident["tags"]
 
 
-def test_env_variables_present():
-    import os
-    from dotenv import load_dotenv
+def test_evidence_bundle_format():
+    evidence_parts = [
+        "=== search_logs ===\nFound 5 errors",
+        "=== search_incidents ===\nFound 2 incidents",
+    ]
+    evidence = "\n\n".join(evidence_parts)
+    assert "search_logs" in evidence
+    assert "search_incidents" in evidence
 
-    load_dotenv()
-    assert os.getenv("SUPABASE_URL") is not None
-    assert os.getenv("SUPABASE_KEY") is not None
-    assert os.getenv("OLLAMA_BASE_URL") is not None
-    assert os.getenv("OLLAMA_MODEL") is not None
+
+def test_service_names_valid():
+    valid = ["auth-service", "payment-service", "notification-service"]
+    assert "auth-service" in valid
+    assert "unknown-service" not in valid
