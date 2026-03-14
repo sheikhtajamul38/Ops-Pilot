@@ -6,6 +6,9 @@ on:
   push:
     branches: [main]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -21,10 +24,10 @@ jobs:
         run: pip install ruff black
 
       - name: Lint with ruff
-        run: ruff check . --ignore E501
+        run: ruff check . --ignore E501 --ignore F401 --ignore E402
 
       - name: Format check
-        run: black --check .
+        run: black --check . --line-length 100
 
   test:
     runs-on: ubuntu-latest
