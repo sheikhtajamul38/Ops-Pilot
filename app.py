@@ -4,14 +4,14 @@ import sys
 import os
 
 sys.path.append(os.path.dirname(__file__))
-from agent.agent import (
+from app.agent.agent import (
     run_investigation,
     run_multi_service_investigation,
     save_resolution,
     draft_status_update,
 )
-from db.timeline import get_timeline, get_multi_service_timeline
-from db.vector_store import get_pattern_summary
+from app.db.timeline import get_timeline, get_multi_service_timeline
+from app.db.vector_store import get_pattern_summary
 
 st.set_page_config(page_title="OpsPilot Local", page_icon="🔍", layout="wide")
 st.title("OpsPilot Local")
